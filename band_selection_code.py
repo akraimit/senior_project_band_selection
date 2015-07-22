@@ -3,6 +3,7 @@ import math
 import os
 import numpy
 import time 
+import itertools
 
 def cov(vector1,vector2): 
    m1 = numpy.mean(vector1)
@@ -172,6 +173,15 @@ if __name__ == '__main__':
                      data[0,0:6] = sixBands
                      print data[0,:]
 
+
+
+
+                     # loop throught all possible 2-band combinations, compute
+                     # measures of separability
+
+
+
+                     
    	               # subset the mean and cov per class based on current 
                      # 6-band combination. compute seperability distance metrics.
                      tssMeanSubset = tssMean[sixBands]
@@ -187,6 +197,9 @@ if __name__ == '__main__':
                            tssCovSubset[i,j] = tssC[sixBands[i],sixBands[j]]
                            chlCovSubset[i,j] = tssC[sixBands[i],sixBands[j]]
                            cdomCovSubset[i,j] = tssC[sixBands[i],sixBands[j]]
+
+
+
 
                      # Compute JM distance
                      data[6] = jm_dist()
