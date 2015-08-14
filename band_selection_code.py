@@ -5,36 +5,6 @@ import numpy
 import time 
 import itertools
 
-def cov(vector1,vector2): 
-   m1 = numpy.mean(vector1)
-   m2 = numpy.mean(vector2)
-   dev1 = ((numpy.matrix(vector1 - m1)))
-   dev2 = ((numpy.matrix(vector2 - m2)))
-   N = len(vector1)
-   print 'cov method 1: '
-   print dev1.T * dev2 / (N - 1)
-   # return 
-
-
-   X = numpy.column_stack([vector1, vector2])
-   X -= X.mean(axis=0) 
-   fact = N - 1 
-   by_hand = numpy.dot(X.conj(), X.T) / fact
-   print 'cov method 2'
-   print by_hand
-
-   print 'cov method 3, numpy'
-   print numpy.cov(vector1,vector2)
-
-   print 'cov method 4, stacking and transposing with numpy'
-   z = numpy.vstack((vector1,vector2))
-   print numpy.cov(z.T)
-
-
-   time.sleep(5)
-
-   return covariance
-
 
 def jm_dist(m1, m2, c1, c2): 
    """ 
@@ -77,21 +47,6 @@ def nCr(n,r):
 
 if __name__ == '__main__':
    
-
-   print 'TESTING: '
-   m1 = numpy.array([3,6,4])
-   m2 = numpy.array([7,12,9])
-   print 'cov 1,2: '
-   print cov(m1,m2)
-   print 'cov 1,1: '
-   c1 = cov(m1,m1)
-   print c1
-
-   print 'cov 2,2: '
-   c2 = cov(m2,m2)
-   print c2
-
-
 
    print nCr(60,6) * nCr(3,2)
 
@@ -148,7 +103,7 @@ if __name__ == '__main__':
    # create array to store band combinations (columns 0-6) and distances 
    # (columns 6-7) for every possible band combination (row dimension) and 
    # combination of 2 classes (n choose k band dimension)
-   data = numpy.zeros([numberOfComputations,8,15])
+   data = numpy.zeros([numberOfComputations,8,3])
 
    # loop through every 6-band combination
    bands = numpy.arange(0,60)
@@ -174,14 +129,6 @@ if __name__ == '__main__':
                      print data[0,:]
 
 
-
-
-                     # loop throught all possible 2-band combinations, compute
-                     # measures of separability
-
-
-
-                     
    	               # subset the mean and cov per class based on current 
                      # 6-band combination. compute seperability distance metrics.
                      tssMeanSubset = tssMean[sixBands]
@@ -198,11 +145,21 @@ if __name__ == '__main__':
                            chlCovSubset[i,j] = tssC[sixBands[i],sixBands[j]]
                            cdomCovSubset[i,j] = tssC[sixBands[i],sixBands[j]]
 
+                           print tssCovSubset
+
+                           time.sleep(5)
+
+                     # for all possible 2-band combinations, compute measures 
+                     # of separability
+
+                     # should I compute every 2-band combo and then sum them? 
+
+                     # Bhattacharryya
+                     # jm dist
+                     # divergence 
 
 
 
-                     # Compute JM distance
-                     data[6] = jm_dist()
                      
 
 
