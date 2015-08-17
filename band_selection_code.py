@@ -4,40 +4,37 @@ import os
 import numpy
 import time 
 import itertools
+import numpy.linalg
+import scipy.linalg
 
 
-def jm_dist(m1, m2, c1, c2): 
-   """ 
-   title::
-      jm_dist
-   description::
-      Computes the Jeffries-Matusita distance between a pair of classes. 
-   attributes::
-      m1, m2
-         Mean vectors of the two classes, of type numpy array. 
-      c1, c2
-         Covariance matrices of the two classes, of type numpy matrix. 
-   returns::
-      dist - JM distance between two classes
-   """
+def bh_jm_div(m1, m2, c1, c2): 
+ 
    m1 = numpy.matrix(m1)
    m2 = numpy.matrix(m2) 
+   c1 = numpy.asmatrix(c1)
+   c2 = numpy.asmatrix(c2)
 
-   part1 = (m1 - m2).T * ((( c1 + c2 ) / 2) ** (-1)) * (m1 - m2)
-   #part1 = (m1 - m2).T * numpy.linalg.inv((( c1 + c2 ) / 2)) * (m1 - m2)
-   
-   part2 = (1/2) * numpy.log( (1/2) * numpy.abs(c1+c2) / numpy.sqrt (numpy.cross(numpy.abs(c1),numpy.abs(c2))))
-   
-   a = (1/8) * part1 + part2 
+   meanDif = m1 - m2
+   cAv = (c1 + c2) / 2.0
 
-   dist = numpy.sqrt(2 * (1-numpy.exp(-a)))
+   # Bhattacharyya computation
+   bh1 = 0.125 * (m1-m2) * numpy.linalg.inv(cAv) * (m1-m2).T 
+   bh2 = 0.5*numpy.log(numpy.abs(numpy.linalg.det(cAv/ scipy.linalg.sqrtm(c1*c2))))
+   bh = bh1 + bh2
 
-   return dist
+   # Jeffries-Matusita (JM) computation 
+   jm = 2.0 * (1-numpy.exp(-bh))
 
+   # divergence computation
+   c1i = numpy.linalg.inv(c1)
+   c2i = numpy.linalg.inv(c2)
+   div1 = 0.5 * numpy.trace((c1-c2)*(c1i-c2i)) 
+   div2 = 0.5 * numpy.trace((c1i+c2i)*(m1-m2).T*(m1-m2))
+   div = div1 + div2
 
-def bhattacharyya_dist():
+   return bh, jm, div
 
-   return dist
 
 
 def nCr(n,r):
@@ -46,76 +43,63 @@ def nCr(n,r):
 
 
 if __name__ == '__main__':
-   
-
-   print nCr(60,6) * nCr(3,2)
-
-   # read in spectral text files for 3 classes, and wavelengths
-   chlMean = numpy.loadtxt('chlA_spectra_avg.txt')[::2]
-   cdomMean = numpy.loadtxt('cdom_spectra_avg.txt')[::2]
-   tssMean = numpy.loadtxt('tss_spectra_avg.txt')[::2]
-   wavelengths = numpy.loadtxt('wavelength.txt')[::2]
 
    # for each constituent directory, create array and read in spectra
    # save ever-other data point yielding 60-sample spectra
-   # also compute mean vector per class
 
-   # total suspended solids
+   # Class 1: total suspended sediments/solids/materials
    os.chdir('tss_spectra/')
    tssAll = numpy.zeros((60,len(glob.glob('*.txt'))))
    tssFilenames = glob.glob('*.txt')
    for i in range(0,len(tssFilenames)):
       tssAll[:,i] = numpy.loadtxt(tssFilenames[i])[::2]
-   tssMean = numpy.mean(tssAll, 1)
+   m1 = numpy.mean(tssAll, 1)
    os.chdir('../')
 
-   # chlorophyll A
+   # Class 2: chlorophyll A
    os.chdir('chlA_spectra/')
    chlAll = numpy.zeros((60,len(glob.glob('*.txt'))))
    chlFilenames = glob.glob('*.txt')
    for i in range(0,len(chlFilenames)):
       chlAll[:,i] = numpy.loadtxt(chlFilenames[i])[::2]
-   chlMean = numpy.mean(chlAll, 1)
    os.chdir('../')
 
-   # color-dissolved organic material 
+   # Class 3: color-dissolved organic material 
    os.chdir('cdom_spectra/')
    cdomAll = numpy.zeros((60,len(glob.glob('*.txt'))))
    cdomFilenames = glob.glob('*.txt')
    for i in range(0,len(cdomFilenames)):
       cdomAll[:,i] = numpy.loadtxt(cdomFilenames[i])[::2]
-   cdomMean = numpy.mean(cdomAll, 1)
    os.chdir('../')
 
    # define number of spectral samples
+   wavelengths = numpy.loadtxt('wavelength.txt')[::2]
    N = len(wavelengths) 
+   print 'Number of samples/wavelengths:', str(N)
+
+   # compute mean vector per class
+   m1 = numpy.mean(tssAll, 1)
+   m2 = numpy.mean(chlAll, 1)
+   m3 = numpy.mean(cdomAll, 1)
 
    # compute covariance matrix, C, for each class
-   tssC = cov(tssMean, tssMean)
-   chlC = cov(chlMean, chlMean)
-   cdomC = cov(cdomMean, cdomMean)
+   c1 = numpy.cov(tssAll)
+   c2 = numpy.cov(chlAll)
+   c3 = numpy.cov(cdomAll)
 
-   # create array to store 6-band combinations and distances
-   print 'Number of Computations to perform: ', str(nCr(60,6) * nCr(3,2))
+   # determine total number of band combinations 
+   numberOfComputations =  nCr(60,6) * nCr(3,2)   
+   print 'Number of Computations to perform: ', str(numberOfComputations)
 
-   numberOfComputations =  nCr(60,6) * nCr(3,2)
-
-   # create array to store band combinations (columns 0-6) and distances 
-   # (columns 6-7) for every possible band combination (row dimension) and 
-   # combination of 2 classes (n choose k band dimension)
-   data = numpy.zeros([numberOfComputations,8,3])
+   # create array to store band combinations (columns 0-5) and distances 
+   # (columns 6-8) for every possible band combination (row dimension) and 
+   # combination of 2 classes (band dimension. 3 choose 2 = 3)
+   data = numpy.zeros([numberOfComputations,9,3])
 
    # loop through every 6-band combination
    bands = numpy.arange(0,60)
 
-   m1 = numpy.array([[2, 0, -9], [3, 4, 1]])
-   m2 = numpy.array([[5, 2, 6], [-4, 4, 9]])
-   c1 = cov(m1,m1)
-   c2 = cov(m2,m2)
-   jm = jm_dist(m1,m2,c1,c2)
-   print jm
-
-
+   r = 0 # current band combination counter 
    for b1 in bands:
       for b2 in range(b1+1,60):
          for b3 in range(b2+1,60):
@@ -125,38 +109,41 @@ if __name__ == '__main__':
 
                      # save the current 6-band combo in an the array
                      sixBands = [b1, b2, b3, b4, b5, b6]
-                     data[0,0:6] = sixBands
-                     print data[0,:]
+                     data[r,0:6,0] = sixBands
 
+   	               # subset the mean vectors based on current 6-band combination
+                     m1Subset = m1[sixBands]
+                     print m1Subset
+                     m2Subset = m2[sixBands]
+                     m3Subset = m3[sixBands]
 
-   	               # subset the mean and cov per class based on current 
-                     # 6-band combination. compute seperability distance metrics.
-                     tssMeanSubset = tssMean[sixBands]
-                     chlMeanSubset = chlMean[sixBands]
-                     cdomMeanSubset = cdomMean[sixBands]
-
-                     # FIGURE OUT HOW TO PULL THE CORRECT ELEMENTS OF THE COV MATRIX 
-                     tssCovSubset = numpy.zeros([6,6])
-                     chlCovSubset = numpy.zeros([6,6])
-                     cdomCovSubset = numpy.zeros([6,6])
+                     # subset covariance matrices
+                     c1Subset = numpy.zeros([6,6])
+                     c2Subset = numpy.zeros([6,6])
+                     c3Subset = numpy.zeros([6,6])
                      for i in range(0,6):
                         for j in range(0,6):
-                           tssCovSubset[i,j] = tssC[sixBands[i],sixBands[j]]
-                           chlCovSubset[i,j] = tssC[sixBands[i],sixBands[j]]
-                           cdomCovSubset[i,j] = tssC[sixBands[i],sixBands[j]]
+                           c1Subset[i,j] = c1[sixBands[i],sixBands[j]]
+                           c2Subset[i,j] = c2[sixBands[i],sixBands[j]]
+                           c3Subset[i,j] = c3[sixBands[i],sixBands[j]]
 
-                           print tssCovSubset
+                     # compute measures of seperability distances and store in array 
+                     # Classes 1 & 2
+                     data[r,6:9,0] = bh_jm_div(m1Subset,m2Subset,c1Subset,c2Subset)
+                     print data[r,:,0]
+                     
+                     time.sleep(3)
 
-                           time.sleep(5)
+                     # Classes 2 & 3
+                     data[r,6:9,1] = bh_jm_div(m2Subset,m3Subset,c2Subset,c3Subset)
+                     print data[r,:,1]
 
-                     # for all possible 2-band combinations, compute measures 
-                     # of separability
+                     # Classes 1 & 3
+                     data[r,6:9,2] = bh_jm_div(m1Subset,m3Subset,c1Subset,c3Subset)
+                     print data[r,:,2]
 
-                     # should I compute every 2-band combo and then sum them? 
+                     r += 1
 
-                     # Bhattacharryya
-                     # jm dist
-                     # divergence 
 
 
 
