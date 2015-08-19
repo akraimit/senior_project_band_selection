@@ -5,7 +5,7 @@ import numpy
 import time 
 import itertools
 import numpy.linalg
-import scipy.linalg
+import code
 
 
 def bh_jm_div(m1, m2, c1, c2): 
@@ -15,23 +15,57 @@ def bh_jm_div(m1, m2, c1, c2):
    c1 = numpy.asmatrix(c1)
    c2 = numpy.asmatrix(c2)
 
-   meanDif = m1 - m2
-   cAv = (c1 + c2) / 2.0
+   # meanDif = m1 - m2
+   # cAv = (c1 + c2) / 2.0
 
-   # Bhattacharyya computation
-   bh1 = 0.125 * (m1-m2) * numpy.linalg.inv(cAv) * (m1-m2).T 
-   bh2 = 0.5*numpy.log(numpy.abs(numpy.linalg.det(cAv/ scipy.linalg.sqrtm(c1*c2))))
-   bh = bh1 + bh2
+   # # Bhattacharyya computation
+   # bh1 = 0.125 * (m1-m2) * numpy.linalg.inv(cAv) * (m1-m2).T 
+   # bh2 = 0.5*numpy.log(numpy.abs(numpy.linalg.det(cAv/ scipy.linalg.sqrtm(c1*c2))))
+   # bh = bh1 + bh2
 
-   # Jeffries-Matusita (JM) computation 
-   jm = 2.0 * (1-numpy.exp(-bh))
+   # # Jeffries-Matusita (JM) computation 
+   # jm = 2.0 * (1-numpy.exp(-bh)) 
 
-   # divergence computation
+   # # divergence computation
+   # c1i = numpy.linalg.inv(c1)
+   # c2i = numpy.linalg.inv(c2)
+   # div1 = 0.5 * numpy.trace((c1-c2)*(c1i-c2i)) 
+   # div2 = 0.5 * numpy.trace((c1i+c2i)*(m1-m2).T*(m1-m2))
+   # div = div1 + div2
+
+
+   # Divergence 
    c1i = numpy.linalg.inv(c1)
    c2i = numpy.linalg.inv(c2)
-   div1 = 0.5 * numpy.trace((c1-c2)*(c1i-c2i)) 
-   div2 = 0.5 * numpy.trace((c1i+c2i)*(m1-m2).T*(m1-m2))
+
+   cDif = c1 - c2
+   cInvDif = c1i - c2i
+   div1 = 0.5 * numpy.trace(numpy.dot(cDif,cInvDif))
+
+   cInvSum = c1i + c2i
+   mDif = numpy.matrix(m1 - m2).T
+   dp1 = numpy.dot(cInvSum,mDif)
+   dp2 = numpy.dot(dp1,mDif.T)
+   div2 = 0.5 * numpy.trace(dp2)
    div = div1 + div2
+   #print 'divergence: ', str(div)
+
+   # Bhattacharyya
+   cAv = (c1 + c2)/2.0
+   cAvInv = numpy.linalg.inv(cAv)
+   dp1 = numpy.dot(mDif.T,cAvInv) 
+   bh1 = 0.125 * numpy.dot(dp1,mDif)
+
+   cAvDet = numpy.linalg.det(cAv)
+   c1Det = numpy.linalg.det(c1)
+   c2Det = numpy.linalg.det(c2)
+   bh2 = 0.5 * numpy.log(cAvDet/((c1Det**0.5)*(c2Det**0.5)))
+   bh = bh1 + bh2
+   #print 'Bhattacharyya distance: ', str(bh)
+
+   # JM 
+   jm = 2.0 * (1-numpy.exp(-bh))
+   #print 'jm distance: ', str(jm)
 
    return bh, jm, div
 
@@ -43,6 +77,8 @@ def nCr(n,r):
 
 
 if __name__ == '__main__':
+
+   startTime = time.clock()
 
    # for each constituent directory, create array and read in spectra
    # save ever-other data point yielding 60-sample spectra
@@ -100,6 +136,7 @@ if __name__ == '__main__':
    bands = numpy.arange(0,60)
 
    r = 0 # current band combination counter 
+   print 'Band combination ', str(r), ' of ', str(numberOfComputations)
    for b1 in bands:
       for b2 in range(b1+1,60):
          for b3 in range(b2+1,60):
@@ -107,13 +144,13 @@ if __name__ == '__main__':
                for b5 in range(b4+1,60):
                   for b6 in range(b5+1,60): 
 
+                     #print 'Band combination ', str(r), ' of ', str(numberOfComputations)
                      # save the current 6-band combo in an the array
                      sixBands = [b1, b2, b3, b4, b5, b6]
                      data[r,0:6,0] = sixBands
 
    	               # subset the mean vectors based on current 6-band combination
                      m1Subset = m1[sixBands]
-                     print m1Subset
                      m2Subset = m2[sixBands]
                      m3Subset = m3[sixBands]
 
@@ -128,22 +165,32 @@ if __name__ == '__main__':
                            c3Subset[i,j] = c3[sixBands[i],sixBands[j]]
 
                      # compute measures of seperability distances and store in array 
-                     # Classes 1 & 2
-                     data[r,6:9,0] = bh_jm_div(m1Subset,m2Subset,c1Subset,c2Subset)
-                     print data[r,:,0]
                      
-                     time.sleep(3)
+                     try:
+                        # Classes 1 & 2
+                        data[r,6:9,0] = bh_jm_div(m1Subset,m2Subset,c1Subset,c2Subset)
 
-                     # Classes 2 & 3
-                     data[r,6:9,1] = bh_jm_div(m2Subset,m3Subset,c2Subset,c3Subset)
-                     print data[r,:,1]
+                        # Classes 2 & 3
+                        data[r,6:9,1] = bh_jm_div(m2Subset,m3Subset,c2Subset,c3Subset)
 
-                     # Classes 1 & 3
-                     data[r,6:9,2] = bh_jm_div(m1Subset,m3Subset,c1Subset,c3Subset)
-                     print data[r,:,2]
+                        # Classes 1 & 3
+                        data[r,6:9,2] = bh_jm_div(m1Subset,m3Subset,c1Subset,c3Subset)
 
+                     except numpy.linalg.linalg.LinAlgError as err:
+                        if 'Singular matrix' in err.message:
+                           #print 'Singular matrix for band combination ', str(r),
+                           #print ' No distances were calculated for it.'
+                           pass
+                        else:
+                           pass
+                        
+
+
+                     #time.sleep(1)
                      r += 1
-
+   elapsedTime = time.clock() - startTime
+   print 'Elapsed time = %s [s]' % elapsedTime
+   code.interact(local=locals())
 
 
 

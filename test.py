@@ -34,6 +34,7 @@ apple = numpy.array([38, 39, 12, 60, 34, 47, 13, 24, 30, 19, 57, 54, 55])
 sample1 = numpy.array([1362, 1411, 1457, 1735, 1621, 1621, 1791, 1863, 1863, 1838])
 sample2 = numpy.array([1354, 1458, 1458, 1458, 1550, 1145, 1428, 1573, 1573, 1657])
 
+
 v1 = sample1
 v2 = sample2
 
@@ -73,17 +74,88 @@ print ' \n'
 # print jm
 
 
+###############  TESTING BY HAND 
+x = numpy.array([[2,2,3,4,5,5],[2,3,4,3,5,4]])
+m1 = numpy.mean(x,1)
+c1 = numpy.asmatrix(numpy.cov(x))
+print 'mean 1: '
+print m1
+print 'cov 1: '
+print c1
+print 'cov 1 T: '
+print numpy.asmatrix(c1).T
+
+y = numpy.array([[1,0,5,4,5,6],[3,3,5,2,1,4]])
+m2 = numpy.mean(y,1)
+c2 = numpy.asmatrix(numpy.cov(y))
+print 'mean 2: '
+print m2
+print 'cov 2: '
+print c2
+print 'cov 2 T: '
+print numpy.asmatrix(c2).T
 
 
+# Divergence 
+print 'Trace of cov 1: '
+print numpy.trace(c1)
+print 'Trace of cov 2: '
+print numpy.trace(c2)
 
+print 'Inv of cov 1: '
+c1i = numpy.linalg.inv(c1)
+print numpy.linalg.inv(c1)
+print 'Inv of cov 2: '
+c2i = numpy.linalg.inv(c2)
+print numpy.linalg.inv(c2)
 
-bh = 0.125 * (m1-m2) * numpy.linalg.inv(cAv) * (m1-m2).T + 0.5*numpy.log(numpy.abs(numpy.linalg.det(cAv/ scipy.linalg.sqrtm(c1*c2))));
+print 'part 1 of divergence calculation: '
+cDif = c1 - c2
+cInvDif = c1i - c2i
+div1 = 0.5 * numpy.trace(numpy.dot(cDif,cInvDif))
 
+cInvSum = c1i + c2i
+print cInvSum
+mDif = numpy.matrix(m1 - m2).T
+print 'dot product of cInvSum and mDif: '
+dp1 = numpy.dot(cInvSum,mDif)
+dp2 = numpy.dot(dp1,mDif.T)
+print 'divergence part 2 calculation: '
+div2 = 0.5 * numpy.trace(dp2)
+print div2
+
+print 'total divergence value: '
+div = div1 + div2
+print div
+
+# Bhattacharyya
+cAv = (c1 + c2)/2.0
+print 'average cov matrix: '
+print cAv
+cAvInv = numpy.linalg.inv(cAv)
+dp1 = numpy.dot(mDif.T,cAvInv) 
+bh1 = 0.125 * numpy.dot(dp1,mDif)
+print 'part 1 of BH dist: '
+print bh1
+
+cAvDet = numpy.linalg.det(cAv)
+c1Det = numpy.linalg.det(c1)
+c2Det = numpy.linalg.det(c2)
+
+bh2 = 0.5 * numpy.log(cAvDet/((c1Det**0.5)*(c2Det**0.5)))
+print 'part 2 of BH dist: '
+print bh2
+
+bh = bh1 + bh2
+print 'Bhattacharyya distance: ', str(bh)
+
+# JM 
 jm = 2.0 * (1-numpy.exp(-bh))
+print 'jm distance: ', str(jm)
 
-print 'bh: '
-print bh
-print 'jm: '
-print jm
+
+# bh = 0.125 * (m1-m2) * numpy.linalg.inv(cAv) * (m1-m2).T + 0.5*numpy.log(numpy.abs(numpy.linalg.det(cAv/ scipy.linalg.sqrtm(c1*c2))));
+
+# jm = 2.0 * (1-numpy.exp(-bh))
 
 
